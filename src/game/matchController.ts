@@ -8,7 +8,7 @@ import {
   type Opponent,
 } from '../engine/match';
 import { sfx } from '../engine/sfx';
-import { speak, stopSpeaking } from '../engine/speech';
+import { say, stopSpeaking } from '../engine/speech';
 import { pickWord, wordKey } from '../engine/srs';
 import { store } from '../engine/store';
 import type { Word } from '../types';
@@ -50,7 +50,7 @@ export class MatchController {
     'aria-label': 'Type the word',
   });
   private timerFill = h('div', { class: 'timer-fill' });
-  private hearBtn = h('button', { class: 'btn small', type: 'button' }, '🔊 Hear word');
+  private hearBtn = h('button', { class: 'btn small', type: 'button' }, '🔊 Say it slowly');
   private sentenceBtn = h('button', { class: 'btn small', type: 'button' }, '💬 Sentence');
   private goBtn = h('button', { class: 'btn', type: 'button' }, 'Spell it!');
   private promptEl = h('div', { class: 'prompt' });
@@ -112,7 +112,7 @@ export class MatchController {
       this.slotsEl,
       this.input,
       h('div', { class: 'row' }, this.hearBtn, this.sentenceBtn, this.goBtn),
-      h('div', { class: 'muted keys' }, '↑ hear the word again · ↓ hear a sentence · Enter to submit'),
+      h('div', { class: 'muted keys' }, '↑ hear it again, slower · ↓ hear a sentence · Enter to submit'),
     );
     this.setPromptActive(false);
     this.root.replaceChildren(
@@ -252,7 +252,7 @@ export class MatchController {
     void this.timerFill.offsetWidth; // restart the CSS transition
     this.timerFill.style.transition = `width ${limitMs}ms linear`;
     this.timerFill.style.width = '0%';
-    speak(word.word);
+    say(word, 'word');
   }
 
   private freezeTimer(remaining: number): void {
@@ -260,13 +260,14 @@ export class MatchController {
     this.timerFill.style.width = `${Math.max(0, remaining) * 100}%`;
   }
 
+  /** Asking again plays the slower, clearer recording. */
   private hearWord(): void {
-    if (this.current) speak(this.current.word);
+    if (this.current) say(this.current, 'slow');
     this.input.focus();
   }
 
   private hearSentence(): void {
-    if (this.current?.sentence) speak(this.current.sentence, 0.9);
+    if (this.current?.sentence) say(this.current, 'sentence');
     this.input.focus();
   }
 
@@ -311,7 +312,7 @@ export class MatchController {
       this.input.value = '';
       this.input.readOnly = false;
       this.freezeTimer(0);
-      speak(word.word, 0.7);
+      say(word, 'slow');
       this.input.focus();
       const done = () => {
         this.input.removeEventListener('keydown', onKey);

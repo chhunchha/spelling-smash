@@ -8,8 +8,8 @@ no login and no server.
 
 ## How it plays
 
-- Each point starts with a spoken word (browser text-to-speech). The ball flies toward you;
-  the timer bar is the ball's flight time. Press **↑** to hear the word again, **↓** to hear it
+- Each point starts with a spoken word (recorded clips). The ball flies toward you;
+  the timer bar is the ball's flight time. Press **↑** to hear it again, slower, **↓** to hear it
   in a sentence.
 - Correct spelling returns the ball. Answering in under 45% of the time is a **SMASH** and is
   harder for the opponent to return. The opponent may miss, which wins you the point.
@@ -17,6 +17,22 @@ no login and no server.
 - Missed words come back sooner (Leitner boxes in `src/engine/srs.ts`).
 - Beating an opponent unlocks the next one. Later opponents are faster and use harder words.
   XP gives levels (Ball Boy → Legend) and there is a daily streak.
+
+## Spoken words
+
+Browser text-to-speech varies a lot by device and was hard to understand, so every built-in
+word has recorded clips in `public/audio/` made with the Kokoro neural voice (`af_heart`):
+`words/` (normal pace), `slow/` (played when he asks to hear it again), and `sentences/`.
+Words added in My Words have no clips and use the browser voice; **My Words → Parent tools**
+lets you pick the clearest browser voice.
+
+After adding words or a pack to `src/data/`, generate the missing clips and commit them:
+
+```bash
+python3.12 -m venv .venv-tts && .venv-tts/bin/pip install kokoro-onnx soundfile   # one time; also needs ffmpeg
+# download kokoro-v1.0.onnx and voices-v1.0.bin (kokoro-onnx model-files-v1.0 release) into ~/tts-models
+.venv-tts/bin/python scripts/make-audio.py --models ~/tts-models
+```
 
 ## Word packs
 

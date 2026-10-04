@@ -559,3 +559,17 @@ h3 {
 .hidden {
   display: none;
 }
+
+.voice-picker {
+  margin-top: 14px;
+}
+
+.voice-select {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--card-2);
+  background: #0d1626;
+  color: var(--text);
+  max-width: 100%;
+}

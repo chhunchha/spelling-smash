@@ -1,5 +1,6 @@
 import { MASTERED_BOX } from '../engine/packs';
 import { MAX_BOX, wordKey } from '../engine/srs';
+import { chooseBrowserVoice, listVoices, onVoicesChanged, speakWithBrowser } from '../engine/speech';
 import { store } from '../engine/store';
 import { parseCustomWords } from '../engine/words';
 import { h } from './dom';
@@ -132,6 +133,30 @@ function backupSection(nav: Nav, message: HTMLElement): HTMLElement {
       ),
     ),
     fileInput,
+    voicePicker(),
+  );
+}
+
+/** Words you add are spoken by the browser's voice (built-in words use recordings), so let a parent pick the clearest one. */
+function voicePicker(): HTMLElement {
+  const select = h('select', { class: 'voice-select', 'aria-label': 'Voice for added words' });
+  const fill = () => {
+    const voices = listVoices();
+    select.replaceChildren(...voices.map((v) => h('option', { value: v.uri, selected: v.selected }, v.label)));
+  };
+  select.addEventListener('change', () => chooseBrowserVoice(select.value));
+  fill();
+  onVoicesChanged(fill);
+  return h(
+    'div',
+    { class: 'voice-picker' },
+    h('p', { class: 'muted' }, 'Voice for words you add (built-in words use recordings). Pick the one that is easiest to understand:'),
+    h(
+      'div',
+      { class: 'row left' },
+      select,
+      h('button', { class: 'btn small', onclick: () => speakWithBrowser('necessary') }, '▶ Test'),
+    ),
   );
 }
 
