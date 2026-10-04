@@ -21,11 +21,39 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
   osc.stop(t0 + dur);
 }
 
+/** Filtered white noise: a crowd cheer or a whoosh. */
+function noise(start: number, dur: number, freq: number, vol: number): void {
+  if (muted) return;
+  ctx ??= new AudioContext();
+  const len = Math.floor(ctx.sampleRate * dur);
+  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = freq;
+  const gain = ctx.createGain();
+  const t0 = ctx.currentTime + start;
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.25);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.connect(filter).connect(gain).connect(ctx.destination);
+  src.start(t0);
+}
+
 export const sfx = {
-  hit: () => tone(520, 0, 0.08, 'square', 0.1),
+  hit: () => {
+    tone(520, 0, 0.08, 'square', 0.1);
+    noise(0, 0.05, 2400, 0.12);
+  },
+  bounce: () => tone(210, 0, 0.05, 'triangle', 0.14),
+  cheer: () => noise(0, 1.1, 1400, 0.22),
   smash: () => {
     tone(220, 0, 0.18, 'sawtooth', 0.15);
     tone(880, 0.05, 0.12, 'square', 0.1);
+    noise(0, 0.22, 900, 0.3);
   },
   point: () => {
     tone(523, 0, 0.12);

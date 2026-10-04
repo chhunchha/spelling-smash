@@ -64,7 +64,12 @@ export class MatchController {
     private onExit: (target: ExitTarget) => void,
   ) {
     this.state = new MatchState(opp.target);
-    this.scene = new Scene(this.canvas, opp.color);
+    this.scene = new Scene(this.canvas, opp.color, opp.name);
+    this.scene.onEvent = (event) => {
+      if (event === 'hit') sfx.hit();
+      else if (event === 'smash') sfx.smash();
+      else if (event === 'bounce') sfx.bounce();
+    };
     this.build();
     this.scene.start();
     this.showIntro();
@@ -169,7 +174,6 @@ export class MatchController {
       const limit = timeLimitMs(word.word, this.opp);
 
       this.scene.flyBall('opp', limit);
-      sfx.hit();
       this.presentWord(word, limit);
       const { outcome, elapsed } = await this.ask(word, limit);
       if (!this.alive || outcome === 'cancelled') return;
@@ -182,6 +186,7 @@ export class MatchController {
         if (!this.alive) return;
         this.setMessage('Got it! Point to your opponent.', '');
         this.state.pointTo('opponent');
+        this.scene.celebrate('opp');
         break;
       }
       const smash = elapsed < limit * SMASH_FRACTION;
@@ -193,26 +198,27 @@ export class MatchController {
       await this.wait(270);
       if (!this.alive) return;
       this.state.playerReturned();
+      this.scene.setRally(this.state.rally);
       this.updateScoreboard();
       const returns = opponentReturns(this.opp, this.state.rally, smash, Math.random);
       const flight = smash ? 450 : 650;
-      sfx.hit();
-      if (smash) {
-        sfx.smash();
-        this.scene.showFlash('SMASH!');
-      }
+      if (smash) this.scene.showFlash('SMASH!');
+      else if (this.state.rally >= 3) this.scene.showFlash(`RALLY ${this.state.rally}!`, false, '#ff9f1c');
       this.setMessage(smash ? `+${earned} XP · Lightning fast!` : `+${earned} XP · Nice return!`, 'good');
-      this.scene.flyBall('player', flight, !returns);
+      this.scene.flyBall('player', flight, !returns, smash ? 1.6 : 1);
       await this.wait(flight + (returns ? 0 : 700));
       if (!this.alive) return;
       if (!returns) {
         sfx.point();
+        sfx.cheer();
         this.scene.showFlash('POINT!');
         this.state.pointTo('player');
+        this.scene.celebrate('player');
         break;
       }
     }
     if (!this.alive) return;
+    this.scene.setRally(0);
     this.updateScoreboard();
     await this.wait(1000);
   }
@@ -345,6 +351,7 @@ export class MatchController {
   }
 
   private updateScoreboard(): void {
+    this.scene.setScore(this.state.player, this.state.opponent);
     this.playerScoreEl.textContent = String(this.state.player);
     this.oppScoreEl.textContent = String(this.state.opponent);
     this.rallyEl.textContent = this.state.rally > 0 ? `Rally: ${this.state.rally} 🏓` : ' ';
@@ -364,6 +371,8 @@ export class MatchController {
       beaten: won && !p.beaten.includes(this.oppIndex) ? [...p.beaten, this.oppIndex] : p.beaten,
     }));
     const unlocked = store.refreshUnlocks();
+    this.scene.celebrateMatch(won);
+    if (won) sfx.cheer();
     (won ? sfx.win : sfx.lose)();
 
     const nextIndex = won && this.oppIndex + 1 < OPPONENTS.length ? this.oppIndex + 1 : null;
