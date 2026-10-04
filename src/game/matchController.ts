@@ -164,7 +164,7 @@ export class MatchController {
     this.setMessage('Get ready…');
     await this.wait(900);
     while (this.alive) {
-      const word = pickWord(store.allWords(), store.progress(), this.recent, this.opp.maxDifficulty, Date.now(), Math.random);
+      const word = pickWord(store.activeWords(), store.progress(), this.recent, this.opp.maxDifficulty, Date.now(), Math.random);
       this.recent = [wordKey(word), ...this.recent].slice(0, RECENT_WORDS);
       const limit = timeLimitMs(word.word, this.opp);
 
@@ -363,6 +363,7 @@ export class MatchController {
       bestRally: Math.max(p.bestRally, this.state.bestRally),
       beaten: won && !p.beaten.includes(this.oppIndex) ? [...p.beaten, this.oppIndex] : p.beaten,
     }));
+    const unlocked = store.refreshUnlocks();
     (won ? sfx.win : sfx.lose)();
 
     const nextIndex = won && this.oppIndex + 1 < OPPONENTS.length ? this.oppIndex + 1 : null;
@@ -375,6 +376,9 @@ export class MatchController {
         h('h2', {}, won ? '🏆 You won!' : 'So close!'),
         h('p', { class: 'final-score' }, `${this.state.player} – ${this.state.opponent}`),
         h('p', {}, `Best rally: ${this.state.bestRally} · +${this.xpGained} XP`),
+        ...unlocked.map((pack) =>
+          h('p', { class: 'unlock' }, `${pack.emoji} New word pack unlocked: ${pack.name}!`),
+        ),
         missedWords.length > 0
           ? h(
               'div',

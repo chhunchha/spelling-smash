@@ -18,6 +18,7 @@ export const newProfile = (): Profile => ({
   wins: 0,
   bestRally: 0,
   streak: 0,
+  unlockedPacks: ['grade4'],
   lastPlayDay: '',
 });
 

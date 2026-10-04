@@ -500,3 +500,62 @@ h3 {
     font-size: 1.4rem;
   }
 }
+
+/* word packs */
+.packs {
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+
+.pack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pack.locked {
+  opacity: 0.6;
+}
+
+.pack-emoji {
+  font-size: 1.8rem;
+  width: 2.2rem;
+  text-align: center;
+}
+
+.pack-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.pack-info small {
+  color: var(--muted);
+}
+
+.bar.small {
+  height: 8px;
+  margin: 0;
+}
+
+.unlock {
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--card-2);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.backup {
+  margin-top: 24px;
+}
+
+.row.left {
+  justify-content: flex-start;
+}
+
+.hidden {
+  display: none;
+}

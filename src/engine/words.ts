@@ -1,9 +1,4 @@
-import grade4 from '../data/grade4.json';
 import type { Difficulty, Word } from '../types';
-
-export const BUILT_IN_WORDS: Word[] = (grade4 as [string, string, Difficulty][]).map(
-  ([word, sentence, difficulty]) => ({ word, sentence, difficulty }),
-);
 
 export function difficultyForLength(len: number): Difficulty {
   return len <= 5 ? 1 : len <= 8 ? 2 : 3;

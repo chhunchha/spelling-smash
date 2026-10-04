@@ -7,15 +7,16 @@ const INTERVALS = [0, 0, 1 * DAY, 3 * DAY, 7 * DAY, 14 * DAY];
 
 export const wordKey = (w: Word | string): string => (typeof w === 'string' ? w : w.word).toLowerCase();
 
+/**
+ * Update a word after an answer. A correct answer only moves the word up a box when the word
+ * was due, so extra practice the same day can't fake mastery. A miss always drops it to box 1.
+ */
 export function recordAnswer(prev: WordProgress | undefined, correct: boolean, now: number): WordProgress {
   const p = prev ?? { box: 0, dueAt: 0, seen: 0, correct: 0 };
+  const counts = { seen: p.seen + 1, correct: p.correct + (correct ? 1 : 0) };
+  if (correct && p.dueAt > now) return { ...p, ...counts };
   const box = correct ? (p.box <= 1 ? 2 : Math.min(p.box + 1, MAX_BOX)) : 1;
-  return {
-    box,
-    dueAt: now + (INTERVALS[box] ?? 0),
-    seen: p.seen + 1,
-    correct: p.correct + (correct ? 1 : 0),
-  };
+  return { box, dueAt: now + (INTERVALS[box] ?? 0), ...counts };
 }
 
 function weight(w: Word, p: WordProgress | undefined, now: number): number {

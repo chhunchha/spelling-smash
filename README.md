@@ -18,13 +18,27 @@ no login and no server.
 - Beating an opponent unlocks the next one. Later opponents are faster and use harder words.
   XP gives levels (Ball Boy → Legend) and there is a daily streak.
 
+## Word packs
+
+Words are grouped into packs in `src/engine/packs.ts`, each backed by a JSON file in `src/data/`
+as `[word, sentence, difficulty 1-3]`. Grade 4 is open from the start. Grade 5 unlocks when 70% of
+Grade 4 is mastered, and Sports & Games when 30% is. Once unlocked, a pack stays unlocked.
+
+A word is **mastered** at Leitner box 4 or higher. A correct answer only moves a word up a box when
+the word is due, so repeating a word the same day doesn't count. That takes roughly a week of
+practice per word.
+
+To add a pack: drop a JSON file in `src/data/`, add an entry to `PACKS` with a `requires` rule,
+and keep words unique across all packs (a test checks this).
+
 ## Adding words
 
 Open **My Words** and paste a list: one word per line, or separated by commas. To control the
 sentence read aloud, write `word | sentence`. Added words appear in every match, at any
 difficulty, and are practiced more often. They are stored per browser.
 
-The built-in list lives in `src/data/grade4.json` as `[word, sentence, difficulty 1-3]`.
+**My Words → Parent tools** can download a backup of all progress and added words, restore it on
+another computer, or unlock every pack early.
 
 ## Develop
 

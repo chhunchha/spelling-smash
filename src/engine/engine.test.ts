@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { MatchState, OPPONENTS, returnChance, timeLimitMs } from './match';
 import { isUnlocked, levelFromXp, newProfile, touchStreak } from './profile';
 import { pickWord, recordAnswer } from './srs';
-import { BUILT_IN_WORDS, parseCustomWords } from './words';
+import { MASTERED_BOX, PACKS, PACK_WORDS, mastery, packsReadyToUnlock, wordsToUnlock } from './packs';
+import { emptySave, normalizeSave, parseSaveText } from './save';
+import { parseCustomWords } from './words';
 
 const NOW = 1_700_000_000_000;
 const DAY = 86_400_000;
@@ -15,6 +17,14 @@ describe('recordAnswer', () => {
   it('drops a word to box 1, due immediately, when missed', () => {
     const mastered = { box: 5, dueAt: NOW + 14 * DAY, seen: 9, correct: 9 };
     expect(recordAnswer(mastered, false, NOW)).toEqual({ box: 1, dueAt: NOW, seen: 10, correct: 9 });
+  });
+  it('does not advance a word that is not due yet, but still counts the answer', () => {
+    const learned = { box: 2, dueAt: NOW + DAY, seen: 1, correct: 1 };
+    expect(recordAnswer(learned, true, NOW)).toEqual({ box: 2, dueAt: NOW + DAY, seen: 2, correct: 2 });
+  });
+  it('advances a word once it is due', () => {
+    const due = { box: 2, dueAt: NOW - 1, seen: 1, correct: 1 };
+    expect(recordAnswer(due, true, NOW)).toEqual({ box: 3, dueAt: NOW + 3 * DAY, seen: 2, correct: 2 });
   });
   it('caps at box 5', () => {
     const p = recordAnswer({ box: 5, dueAt: 0, seen: 1, correct: 1 }, true, NOW);
@@ -76,17 +86,77 @@ describe('parseCustomWords', () => {
   });
 });
 
-describe('built-in words', () => {
-  it('has unique lowercase words with sentences', () => {
-    const keys = BUILT_IN_WORDS.map((w) => w.word);
+describe('built-in packs', () => {
+  it('has unique lowercase words with sentences across all packs', () => {
+    const keys = PACK_WORDS.map((w) => w.word);
     expect(new Set(keys).size).toBe(keys.length);
-    for (const w of BUILT_IN_WORDS) {
-      expect(w.word).toBe(w.word.toLowerCase());
+    for (const w of PACK_WORDS) {
+      expect(w.word).toMatch(/^[a-z]+$/);
       expect(w.sentence).toBeTruthy();
+      expect(w.sentence?.toLowerCase()).toContain(w.word.slice(0, 4));
     }
   });
-  it('has words for every opponent difficulty', () => {
-    for (const d of [1, 2, 3]) expect(BUILT_IN_WORDS.some((w) => w.difficulty === d)).toBe(true);
+  it('has words at every opponent difficulty in the starter pack', () => {
+    for (const d of [1, 2, 3]) expect(PACKS[0]?.words.some((w) => w.difficulty === d)).toBe(true);
+  });
+  it('only requires packs that exist, and the starter pack is open', () => {
+    expect(PACKS[0]?.requires).toBeUndefined();
+    for (const p of PACKS) if (p.requires) expect(PACKS.some((r) => r.id === p.requires?.pack)).toBe(true);
+  });
+});
+
+describe('pack unlocking', () => {
+  const grade4 = PACKS.find((p) => p.id === 'grade4')!;
+  const grade5 = PACKS.find((p) => p.id === 'grade5')!;
+  const masterFirst = (n: number) =>
+    Object.fromEntries(
+      grade4.words.slice(0, n).map((w) => [w.word, { box: MASTERED_BOX, dueAt: NOW, seen: 4, correct: 4 }]),
+    );
+
+  it('counts mastered words', () => {
+    expect(mastery(grade4, masterFirst(10))).toEqual({ mastered: 10, total: grade4.words.length });
+  });
+  it('reports how many more words are needed', () => {
+    const need = Math.ceil(grade4.words.length * 0.7);
+    expect(wordsToUnlock(grade5, {})).toBe(need);
+    expect(wordsToUnlock(grade5, masterFirst(need - 1))).toBe(1);
+    expect(wordsToUnlock(grade5, masterFirst(need))).toBe(0);
+  });
+  it('unlocks a pack once the requirement is met, and not before', () => {
+    const need = Math.ceil(grade4.words.length * 0.7);
+    expect(packsReadyToUnlock(['grade4'], masterFirst(need - 1)).map((p) => p.id)).not.toContain('grade5');
+    expect(packsReadyToUnlock(['grade4'], masterFirst(need)).map((p) => p.id)).toContain('grade5');
+  });
+  it('does not report packs that are already unlocked', () => {
+    const need = Math.ceil(grade4.words.length * 0.7);
+    expect(packsReadyToUnlock(['grade4', 'grade5'], masterFirst(need)).map((p) => p.id)).not.toContain('grade5');
+  });
+});
+
+describe('save data', () => {
+  it('round-trips a valid save', () => {
+    const save = emptySave();
+    save.progress['cat'] = { box: 3, dueAt: NOW, seen: 2, correct: 2 };
+    save.customWords.push({ word: 'meow', difficulty: 1, custom: true, sentence: 'The cat says meow.' });
+    expect(parseSaveText(JSON.stringify(save))).toEqual(save);
+  });
+  it('rejects text that is not a save', () => {
+    expect(parseSaveText('not json')).toBeNull();
+    expect(parseSaveText('{"version":2}')).toBeNull();
+    expect(parseSaveText('[]')).toBeNull();
+  });
+  it('cleans bad values and always keeps the starter pack open', () => {
+    const save = normalizeSave({
+      version: 1,
+      progress: { cat: { box: 99, dueAt: 'x' }, bad: 5 },
+      customWords: [{ word: 'ok' }, { word: '<script>' }, { word: 'ok' }],
+      profile: { xp: -5, unlockedPacks: ['sports', 'nope'] },
+    });
+    expect(save?.progress['cat']).toEqual({ box: 5, dueAt: 0, seen: 0, correct: 0 });
+    expect(save?.progress['bad']).toBeUndefined();
+    expect(save?.customWords.map((w) => w.word)).toEqual(['ok']);
+    expect(save?.profile.xp).toBe(0);
+    expect(save?.profile.unlockedPacks).toEqual(['grade4', 'sports']);
   });
 });
 

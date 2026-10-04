@@ -1,3 +1,4 @@
+import { MASTERED_BOX } from '../engine/packs';
 import { MAX_BOX, wordKey } from '../engine/srs';
 import { store } from '../engine/store';
 import { parseCustomWords } from '../engine/words';
@@ -19,7 +20,7 @@ export function wordsScreen(nav: Nav): Screen {
   const renderList = () => {
     const progress = store.progress();
     const rows = store
-      .allWords()
+      .activeWords()
       .sort((a, b) => Number(!!b.custom) - Number(!!a.custom) || a.word.localeCompare(b.word))
       .map((w) => {
         const p = progress[wordKey(w)];
@@ -65,8 +66,13 @@ export function wordsScreen(nav: Nav): Screen {
     h('button', { class: 'btn', onclick: add }, 'Add words'),
     message,
     h('h3', {}, 'All words'),
-    h('p', { class: 'muted' }, '★ shows how well he knows each word: 0 stars is new, 5 stars is mastered.'),
+    h(
+      'p',
+      { class: 'muted' },
+      `★ shows how well he knows each word: 0 stars is new. ${MASTERED_BOX} or more stars counts as mastered. Words from locked packs appear once unlocked.`,
+    ),
     list,
+    backupSection(nav, message),
     h(
       'button',
       {
@@ -83,4 +89,55 @@ export function wordsScreen(nav: Nav): Screen {
   );
   renderList();
   return { el };
+}
+
+/** Parent tools: back up or restore all progress, and unlock every pack early. */
+function backupSection(nav: Nav, message: HTMLElement): HTMLElement {
+  const fileInput = h('input', { type: 'file', accept: 'application/json,.json', class: 'hidden' });
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (!confirm('Replace all progress and added words with this backup?')) {
+      fileInput.value = '';
+      return;
+    }
+    if (store.importJson(await file.text())) nav('home');
+    else message.textContent = 'That file is not a Spelling Smash backup.';
+    fileInput.value = '';
+  });
+  return h(
+    'section',
+    { class: 'backup' },
+    h('h3', {}, 'Parent tools'),
+    h(
+      'p',
+      { class: 'muted' },
+      'Progress is saved in this browser only. Download a backup to keep it safe or move it to another computer.',
+    ),
+    h(
+      'div',
+      { class: 'row left' },
+      h('button', { class: 'btn small', onclick: downloadBackup }, 'Download backup'),
+      h('button', { class: 'btn small', onclick: () => fileInput.click() }, 'Restore from backup'),
+      h(
+        'button',
+        {
+          class: 'btn small',
+          onclick: () => {
+            store.unlockAllPacks();
+            nav('home');
+          },
+        },
+        'Unlock all word packs',
+      ),
+    ),
+    fileInput,
+  );
+}
+
+function downloadBackup(): void {
+  const url = URL.createObjectURL(new Blob([store.exportJson()], { type: 'application/json' }));
+  const a = h('a', { href: url, download: `spelling-smash-backup-${new Date().toISOString().slice(0, 10)}.json` });
+  a.click();
+  URL.revokeObjectURL(url);
 }

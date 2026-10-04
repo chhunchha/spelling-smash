@@ -4,6 +4,8 @@ export interface Word {
   word: string;
   sentence?: string;
   difficulty: Difficulty;
+  /** Id of the word pack this word belongs to. Words a parent adds have no pack. */
+  pack?: string;
   custom?: boolean;
 }
 
@@ -22,6 +24,8 @@ export interface Profile {
   wins: number;
   bestRally: number;
   streak: number;
+  /** Ids of word packs he has unlocked. Once unlocked, a pack stays unlocked. */
+  unlockedPacks: string[];
   /** Local date (YYYY-MM-DD) of the last day he played. */
   lastPlayDay: string;
 }
