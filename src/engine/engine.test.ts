@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MatchState, OPPONENTS, returnChance, timeLimitMs } from './match';
+import { DEFAULT_TIME_MULTIPLIER, MatchState, OPPONENTS, TIME_OPTIONS, returnChance, timeLimitMs } from './match';
 import { isUnlocked, levelFromXp, newProfile, touchStreak } from './profile';
 import { pickWord, recordAnswer } from './srs';
 import { MASTERED_BOX, PACKS, PACK_WORDS, mastery, packsReadyToUnlock, wordsToUnlock } from './packs';
@@ -140,6 +140,15 @@ describe('save data', () => {
     save.customWords.push({ word: 'meow', difficulty: 1, custom: true, sentence: 'The cat says meow.' });
     expect(parseSaveText(JSON.stringify(save))).toEqual(save);
   });
+  it('defaults and validates the typing-time setting', () => {
+    expect(emptySave().settings.timeMultiplier).toBe(DEFAULT_TIME_MULTIPLIER);
+    // a save from before settings existed gets the default
+    expect(normalizeSave({ version: 1 })?.settings.timeMultiplier).toBe(DEFAULT_TIME_MULTIPLIER);
+    expect(normalizeSave({ version: 1, settings: { timeMultiplier: 2 } })?.settings.timeMultiplier).toBe(2);
+    expect(normalizeSave({ version: 1, settings: { timeMultiplier: 0.01 } })?.settings.timeMultiplier).toBe(
+      DEFAULT_TIME_MULTIPLIER,
+    );
+  });
   it('rejects text that is not a save', () => {
     expect(parseSaveText('not json')).toBeNull();
     expect(parseSaveText('{"version":2}')).toBeNull();
@@ -172,6 +181,14 @@ describe('match rules', () => {
   it('gives more time to longer words', () => {
     const opp = OPPONENTS[0]!;
     expect(timeLimitMs('paddle', opp)).toBeLessThan(timeLimitMs('championship', opp));
+  });
+  it('scales the time limit with the parent setting', () => {
+    const opp = OPPONENTS[0]!;
+    expect(timeLimitMs('paddle', opp, 2)).toBe(timeLimitMs('paddle', opp) * 2);
+    expect(timeLimitMs('paddle', opp)).toBe(Math.round(11000 * opp.timeScale));
+  });
+  it('defaults to one of the offered time settings', () => {
+    expect(TIME_OPTIONS.some((o) => o.value === DEFAULT_TIME_MULTIPLIER)).toBe(true);
   });
   it('makes long rallies and smashes harder to return, within bounds', () => {
     const opp = OPPONENTS[2]!;

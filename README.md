@@ -11,6 +11,9 @@ no login and no server.
 - Each point starts with a spoken word (recorded clips). The ball flies toward you;
   the timer bar is the ball's flight time. Press **↑** to hear it again, slower, **↓** to hear it
   in a sentence.
+- Time to spell = 5 s + 1 s per letter, scaled by the opponent and by **My Words → Parent tools → Typing time**
+  (default ×1.25). The answer submits itself the moment the word is typed correctly; Enter is only
+  needed to submit a wrong spelling.
 - Correct spelling returns the ball. Answering in under 45% of the time is a **SMASH** and is
   harder for the opponent to return. The opponent may miss, which wins you the point.
 - A wrong spelling or timeout loses the point. The correct spelling is shown and he types it once.

@@ -1,4 +1,4 @@
-import type { Profile, SaveData, Word, WordProgress } from '../types';
+import type { Profile, SaveData, Settings, Word, WordProgress } from '../types';
 import { PACK_WORDS, PACKS, packsReadyToUnlock, wordsInPacks, type Pack } from './packs';
 import { emptySave, normalizeSave, parseSaveText } from './save';
 import { touchStreak } from './profile';
@@ -27,6 +27,11 @@ function persist(): void {
 
 export const store = {
   profile: (): Profile => data.profile,
+  settings: (): Settings => data.settings,
+  updateSettings(patch: Partial<Settings>): void {
+    data = { ...data, settings: { ...data.settings, ...patch } };
+    persist();
+  },
   progress: (): Record<string, WordProgress> => data.progress,
   customWords: (): Word[] => data.customWords,
 

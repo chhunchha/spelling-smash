@@ -30,8 +30,14 @@ export interface Profile {
   lastPlayDay: string;
 }
 
+export interface Settings {
+  /** Multiplies the time he has to spell each word. */
+  timeMultiplier: number;
+}
+
 export interface SaveData {
   version: 1;
+  settings: Settings;
   progress: Record<string, WordProgress>;
   customWords: Word[];
   profile: Profile;

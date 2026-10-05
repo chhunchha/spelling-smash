@@ -1,3 +1,4 @@
+import { TIME_OPTIONS } from '../engine/match';
 import { MASTERED_BOX } from '../engine/packs';
 import { MAX_BOX, wordKey } from '../engine/srs';
 import { chooseBrowserVoice, listVoices, onVoicesChanged, speakWithBrowser } from '../engine/speech';
@@ -133,7 +134,26 @@ function backupSection(nav: Nav, message: HTMLElement): HTMLElement {
       ),
     ),
     fileInput,
+    timePicker(),
     voicePicker(),
+  );
+}
+
+/** How long he gets to type each word. Slower typists need more; the ball just flies slower. */
+function timePicker(): HTMLElement {
+  const select = h(
+    'select',
+    { class: 'voice-select', 'aria-label': 'Typing time' },
+    ...TIME_OPTIONS.map((o) =>
+      h('option', { value: String(o.value), selected: o.value === store.settings().timeMultiplier }, `${o.label} (×${o.value})`),
+    ),
+  );
+  select.addEventListener('change', () => store.updateSettings({ timeMultiplier: Number(select.value) }));
+  return h(
+    'div',
+    { class: 'voice-picker' },
+    h('p', { class: 'muted' }, 'Typing time: how long he gets to spell each word. Raise it if he needs longer to find the keys.'),
+    select,
   );
 }
 

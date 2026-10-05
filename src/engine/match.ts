@@ -25,8 +25,20 @@ export const OPPONENTS: Opponent[] = [
 /** Answering faster than this share of the time limit counts as a smash. */
 export const SMASH_FRACTION = 0.45;
 
-export function timeLimitMs(word: string, opp: Opponent): number {
-  return Math.round((4000 + 800 * word.length) * opp.timeScale);
+/** Choices for the parent's "Typing time" setting. The first is the base pace. */
+export const TIME_OPTIONS = [
+  { value: 1, label: 'Normal' },
+  { value: 1.25, label: 'A little more time' },
+  { value: 1.5, label: 'Extra time' },
+  { value: 2, label: 'Lots of time' },
+  { value: 3, label: 'No rush' },
+] as const;
+
+export const DEFAULT_TIME_MULTIPLIER = 1.25;
+
+/** Time to spell a word: a base for listening, a second per letter for typing, scaled by opponent and the parent's setting. */
+export function timeLimitMs(word: string, opp: Opponent, multiplier = 1): number {
+  return Math.round((5000 + 1000 * word.length) * opp.timeScale * multiplier);
 }
 
 /** Chance the opponent gets the ball back after the player's `rally`-th return. */

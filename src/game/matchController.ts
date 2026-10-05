@@ -112,7 +112,7 @@ export class MatchController {
       this.slotsEl,
       this.input,
       h('div', { class: 'row' }, this.hearBtn, this.sentenceBtn, this.goBtn),
-      h('div', { class: 'muted keys' }, '↑ hear it again, slower · ↓ hear a sentence · Enter to submit'),
+      h('div', { class: 'muted keys' }, '↑ hear it again, slower · ↓ hear a sentence · it submits when the word is right'),
     );
     this.setPromptActive(false);
     this.root.replaceChildren(
@@ -171,7 +171,7 @@ export class MatchController {
     while (this.alive) {
       const word = pickWord(store.activeWords(), store.progress(), this.recent, this.opp.maxDifficulty, Date.now(), Math.random);
       this.recent = [wordKey(word), ...this.recent].slice(0, RECENT_WORDS);
-      const limit = timeLimitMs(word.word, this.opp);
+      const limit = timeLimitMs(word.word, this.opp, store.settings().timeMultiplier);
 
       this.scene.flyBall('opp', limit);
       this.presentWord(word, limit);
@@ -278,6 +278,7 @@ export class MatchController {
       const finish = (outcome: Outcome) => {
         clearTimeout(timer);
         this.input.removeEventListener('keydown', onKey);
+        this.input.removeEventListener('input', onInput);
         this.goBtn.removeEventListener('click', submit);
         this.cancelAsk = null;
         this.input.readOnly = true;
@@ -295,9 +296,14 @@ export class MatchController {
           submit();
         }
       };
+      // No need to press Enter once the word is right: that saves a slow typist a few seconds.
+      const onInput = () => {
+        if (this.input.value.trim().toLowerCase() === answer) finish('correct');
+      };
       const timer = setTimeout(() => finish('timeout'), limitMs);
       this.cancelAsk = () => finish('cancelled');
       this.input.addEventListener('keydown', onKey);
+      this.input.addEventListener('input', onInput);
       this.goBtn.addEventListener('click', submit);
     });
   }
@@ -316,6 +322,7 @@ export class MatchController {
       this.input.focus();
       const done = () => {
         this.input.removeEventListener('keydown', onKey);
+        this.input.removeEventListener('input', onInput);
         this.goBtn.removeEventListener('click', submit);
         this.slotsEl.classList.remove('reveal');
         this.input.readOnly = true;
@@ -338,8 +345,12 @@ export class MatchController {
           submit();
         }
       };
+      const onInput = () => {
+        if (this.input.value.trim().toLowerCase() === answer) submit();
+      };
       this.cancelAsk = done;
       this.input.addEventListener('keydown', onKey);
+      this.input.addEventListener('input', onInput);
       this.goBtn.addEventListener('click', submit);
     });
   }

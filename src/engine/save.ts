@@ -1,9 +1,12 @@
-import type { Difficulty, Profile, SaveData, Word, WordProgress } from '../types';
+import type { Difficulty, Profile, SaveData, Settings, Word, WordProgress } from '../types';
+import { DEFAULT_TIME_MULTIPLIER, TIME_OPTIONS } from './match';
 import { PACKS } from './packs';
 import { newProfile } from './profile';
 
+export const newSettings = (): Settings => ({ timeMultiplier: DEFAULT_TIME_MULTIPLIER });
+
 export function emptySave(): SaveData {
-  return { version: 1, progress: {}, customWords: [], profile: newProfile() };
+  return { version: 1, settings: newSettings(), progress: {}, customWords: [], profile: newProfile() };
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -63,11 +66,19 @@ function cleanProfile(raw: unknown): Profile {
   };
 }
 
+function cleanSettings(raw: unknown): Settings {
+  const base = newSettings();
+  if (!isObject(raw)) return base;
+  const known = TIME_OPTIONS.some((o) => o.value === raw.timeMultiplier);
+  return { timeMultiplier: known ? (raw.timeMultiplier as number) : base.timeMultiplier };
+}
+
 /** Validate and clean untrusted data (localStorage or an imported backup). Returns null if it is not a save. */
 export function normalizeSave(raw: unknown): SaveData | null {
   if (!isObject(raw) || raw.version !== 1) return null;
   return {
     version: 1,
+    settings: cleanSettings(raw.settings),
     progress: cleanProgress(raw.progress),
     customWords: cleanCustomWords(raw.customWords),
     profile: cleanProfile(raw.profile),
