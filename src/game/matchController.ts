@@ -39,6 +39,11 @@ export class MatchController {
   private rallyEl = h('div', { class: 'rally' }, ' ');
   private messageEl = h('div', { class: 'message' });
   private slotsEl = h('div', { class: 'slots' });
+  private leftEl = h('div', { class: 'letters-left' });
+  /** The word being spelled, and whether its letters are shown (when he retypes a missed word). */
+  private target = '';
+  private reveal = false;
+  private shownLength = 0;
   private input = h('input', {
     class: 'answer',
     type: 'text',
@@ -96,7 +101,14 @@ export class MatchController {
     );
     this.hearBtn.addEventListener('click', () => this.hearWord());
     this.sentenceBtn.addEventListener('click', () => this.hearSentence());
-    this.input.addEventListener('input', () => this.input.classList.remove('shake'));
+    this.input.addEventListener('input', () => {
+      this.slotsEl.classList.remove('shake');
+      this.renderSlots();
+    });
+    // Clicking anywhere on the prompt brings the cursor back to the letter boxes.
+    this.promptEl.addEventListener('click', (e) => {
+      if (!this.input.disabled && !(e.target instanceof HTMLButtonElement)) this.input.focus();
+    });
     this.input.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -109,8 +121,8 @@ export class MatchController {
     this.promptEl.append(
       h('div', { class: 'timer' }, this.timerFill),
       this.messageEl,
-      this.slotsEl,
-      this.input,
+      h('div', { class: 'entry' }, this.slotsEl, this.input),
+      this.leftEl,
       h('div', { class: 'row' }, this.hearBtn, this.sentenceBtn, this.goBtn),
       h('div', { class: 'muted keys' }, '↑ hear it again, slower · ↓ hear a sentence · it submits when the word is right'),
     );
@@ -239,12 +251,11 @@ export class MatchController {
   private presentWord(word: Word, limitMs: number): void {
     this.current = word;
     this.setPromptActive(true);
-    this.slotsEl.textContent = word.word
-      .split('')
-      .map(() => '_')
-      .join(' ');
+    this.target = word.word;
+    this.reveal = false;
     this.input.value = '';
     this.input.readOnly = false;
+    this.renderSlots();
     this.setMessage('Listen and spell the word', '');
     this.input.focus();
     this.timerFill.style.transition = 'none';
@@ -253,6 +264,47 @@ export class MatchController {
     this.timerFill.style.transition = `width ${limitMs}ms linear`;
     this.timerFill.style.width = '0%';
     say(word, 'word');
+  }
+
+  /**
+   * Draw one box per letter. Typed letters fill the boxes from the left and the next empty box
+   * blinks. Extra letters get red boxes. While he retypes a missed word the correct letters show
+   * faintly in the boxes, and each typed letter turns green or red; during normal play no
+   * feedback is given, so the boxes never give the spelling away.
+   */
+  private renderSlots(): void {
+    const typed = this.input.value.toLowerCase();
+    const target = this.target.toLowerCase();
+    const count = Math.max(target.length, typed.length);
+    const boxes: HTMLElement[] = [];
+    for (let i = 0; i < count; i++) {
+      const letter = typed[i];
+      const classes = ['slot'];
+      if (i >= target.length) classes.push('extra');
+      if (letter !== undefined) {
+        classes.push('filled');
+        if (i === typed.length - 1 && typed.length > this.shownLength) classes.push('pop');
+        if (this.reveal && i < target.length) classes.push(letter === target[i] ? 'ok' : 'bad');
+      } else {
+        if (i === typed.length) classes.push('active');
+        if (this.reveal) classes.push('ghost');
+      }
+      const text = letter ?? (this.reveal ? target[i] : '');
+      boxes.push(h('span', { class: classes.join(' ') }, text));
+    }
+    this.shownLength = typed.length;
+    this.slotsEl.style.setProperty('--n', String(count));
+    this.slotsEl.replaceChildren(...boxes);
+
+    const left = target.length - typed.length;
+    this.leftEl.textContent =
+      this.target === ''
+        ? ''
+        : left > 0
+          ? `${left} letter${left === 1 ? '' : 's'} to go`
+          : left === 0
+            ? 'All letters in! Press Enter to check'
+            : `${-left} too many letter${left === -1 ? '' : 's'}: press Backspace`;
   }
 
   private freezeTimer(remaining: number): void {
@@ -312,11 +364,12 @@ export class MatchController {
   private retype(word: Word): Promise<void> {
     return new Promise((resolve) => {
       const answer = word.word.toLowerCase();
-      this.slotsEl.textContent = word.word.split('').join(' ');
-      this.slotsEl.classList.add('reveal');
-      this.setMessage('The word is spelled like this. Type it to keep going!', 'bad');
+      this.target = word.word;
+      this.reveal = true;
+      this.setMessage('Here is the word. Type it letter by letter to keep going!', 'bad');
       this.input.value = '';
       this.input.readOnly = false;
+      this.renderSlots();
       this.freezeTimer(0);
       say(word, 'slow');
       this.input.focus();
@@ -324,7 +377,7 @@ export class MatchController {
         this.input.removeEventListener('keydown', onKey);
         this.input.removeEventListener('input', onInput);
         this.goBtn.removeEventListener('click', submit);
-        this.slotsEl.classList.remove('reveal');
+        this.reveal = false;
         this.input.readOnly = true;
         this.cancelAsk = null;
         resolve();
@@ -334,9 +387,9 @@ export class MatchController {
           sfx.hit();
           done();
         } else {
-          this.input.classList.remove('shake');
-          void this.input.offsetWidth;
-          this.input.classList.add('shake');
+          this.slotsEl.classList.remove('shake');
+          void this.slotsEl.offsetWidth;
+          this.slotsEl.classList.add('shake');
         }
       };
       const onKey = (e: KeyboardEvent) => {

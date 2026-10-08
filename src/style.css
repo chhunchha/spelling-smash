@@ -274,7 +274,7 @@ h3 {
 .court-wrap {
   position: relative;
   /* Keep the court + answer box on one screen, e.g. a 1366x768 Chromebook. */
-  width: min(100%, max(320px, calc((100dvh - 350px) * 16 / 9)));
+  width: min(100%, max(320px, calc((100dvh - 315px) * 16 / 9)));
   margin: 0 auto;
 }
 
@@ -385,41 +385,116 @@ h3 {
   color: var(--bad);
 }
 
+/* letter boxes: one per letter, filled as he types */
+.entry {
+  position: relative;
+  max-width: 560px;
+  margin: 8px auto 4px;
+}
+
 .slots {
-  margin: 6px 0;
-  min-height: 1.4em;
-  font-family: 'Courier New', monospace;
-  font-size: 1.7rem;
-  letter-spacing: 2px;
-  color: var(--muted);
+  --avail: min(540px, calc(100vw - 80px));
+  --box: clamp(22px, calc((var(--avail) - (var(--n, 8) - 1) * 6px) / var(--n, 8)), 52px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  min-height: calc(var(--box) * 1.25);
+  cursor: text;
 }
 
-.slots.reveal {
-  color: var(--accent);
-  font-weight: 800;
-}
-
-.answer {
-  width: 100%;
-  max-width: 420px;
-  font: inherit;
-  font-size: 1.8rem;
-  text-align: center;
-  padding: 10px 14px;
-  border-radius: 14px;
-  border: 3px solid var(--card-2);
+.slot {
+  width: var(--box);
+  height: calc(var(--box) * 1.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
   background: #0d1626;
+  border: 3px solid var(--card-2);
+  font-size: calc(var(--box) * 0.7);
+  font-weight: 800;
   color: var(--text);
-  outline: none;
 }
 
-.answer:focus {
+.slot.filled {
+  border-color: #5b7db3;
+  background: #14233d;
+}
+
+.slot.pop {
+  animation: pop 0.14s ease-out;
+}
+
+.slot.active {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px #ffd16633;
+  animation: blink 1s steps(2, jump-none) infinite;
 }
 
-.answer.shake {
-  animation: shake 0.3s;
+.slot.extra {
   border-color: var(--bad);
+  color: var(--bad);
+}
+
+.slot.ghost {
+  color: #ffffff40;
+}
+
+.slot.ok {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.slot.bad {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.slots.shake {
+  animation: shake 0.3s;
+}
+
+.entry:not(:focus-within) .slot.active {
+  animation: none;
+  box-shadow: none;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes blink {
+  50% {
+    border-color: var(--card-2);
+  }
+}
+
+/* The real input sits invisibly over the boxes so typing, focus and mobile keyboards just work. */
+.answer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: 16px;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  cursor: text;
+}
+
+.letters-left {
+  min-height: 1.3em;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+  color: var(--muted);
 }
 
 @keyframes shake {
@@ -497,7 +572,7 @@ h3 {
     padding: 10px 16px 12px;
   }
   .slots {
-    font-size: 1.4rem;
+    --box: clamp(22px, calc((var(--avail) - (var(--n, 8) - 1) * 6px) / var(--n, 8)), 44px);
   }
 }
 
